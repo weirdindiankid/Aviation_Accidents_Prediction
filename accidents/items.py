@@ -88,6 +88,7 @@ class Aircraft(Model):
                                     null=True)
     asn_aircraft_type = CharField(20)
     first_flight_date = DateField()
+    total_airframe_hours = IntegerField()
     engines_number = IntegerField()
     engine_type = ForeignKeyField(EngineType, related_name='aircrafts',
                                   null=True)
