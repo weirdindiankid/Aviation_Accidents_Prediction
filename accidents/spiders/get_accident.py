@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+
+import re
+
+from dateutil.parser import parse
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 
@@ -29,8 +33,12 @@ class GetAccidentSpider(CrawlSpider):
     def parse_accident(self, response):
         i = Accident()
 
-        i.asn_id = response.xpath('//input[@id="sid"]/@value').extract()
-        i.date = response.xpath('//input[@id="sid"]/@value').extract()
+        i.asn_id = re.split(r'record.php\?id=', response.url)[-1]
+        date_text = response.xpath(
+            "//tr[td='Date:']/td[2]/text()").extract()[0]
+        if (date_text.strip() == 'date unk.'):
+            return
+        i.date = parse(date_text)
         i.time = response.xpath('//input[@id="sid"]/@value').extract()
 
         # extract aircraft
