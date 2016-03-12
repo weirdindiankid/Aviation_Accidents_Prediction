@@ -2,6 +2,7 @@
 
 import re
 
+from datetime import datetime
 from dateutil.parser import parse
 from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
@@ -38,65 +39,58 @@ class GetAccidentSpider(CrawlSpider):
             "//tr[td='Date:']/td[2]/text()").extract()[0]
         if (date_text.strip() == 'date unk.'):
             return
-        i.date = parse(date_text)
-        i.time = response.xpath('//input[@id="sid"]/@value').extract()
+        i.date = parse(self.extract_typical(response, "Time:"))
+        i.time = datetime.time(self.extract_typical(response, "Time:"))
 
         # extract aircraft
         aircraft = Aircraft()
-        i.registration = response.xpath('//input[@id="sid"]/@value').extract()
-        i.model_serial_number = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.asn_aircraft_type = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.first_flight_date = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.engines_number = response.xpath('//input[@id="sid"]/@value').extract()
-        i.asn_engine_type = response.xpath(
-            '//input[@id="sid"]/@value').extract()
+        aircraft.registration =self.extract_typical(response, "Registration:")
+        aircraft.model_serial_number = self.extract_typical(response, "Registration:")
+        aircraft.asn_aircraft_type = self.extract_typical(response, "Registration:")
+        aircraft.first_flight_date = self.extract_typical(response, "Registration:")
+        aircraft.engines_number = self.extract_typical(response, "Registration:")
+        aircraft.asn_engine_type = self.extract_typical(response, "Registration:")
+        aircraft.aircraft = aircraft
 
-        i.aircraft = aircraft
-        i.damage_type = response.xpath('//input[@id="sid"]/@value').extract()
-        i.lat = response.xpath('//input[@id="sid"]/@value').extract()
-        i.long = response.xpath('//input[@id="sid"]/@value').extract()
-        i.flight_phase = response.xpath('//input[@id="sid"]/@value').extract()
-        i.asn_dep_airfield = response.xpath(
-            '//input[@id="sid"]/@value').extract()
+        i.damage_type = self.extract_typical(response, "Registration:")
+        i.lat = self.extract_typical(response, "Registration:")
+        i.long = self.extract_typical(response, "Registration:")
+        i.flight_phase = self.extract_typical(response, "Registration:")
+        i.asn_dep_airfield = self.extract_typical(response, "Registration:")
+        i.asn_dest_airfield = self.extract_typical(response, "Registration:")
 
-        dep_weather = Weather()
-        i.wind_speed_ff_ms = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.wind_direction_ddd = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.vi.i.y_VVVV = response.xpath('//input[@id="sid"]/@value').extract()
-        i.VPP_vi.i.y_VrVrVrVr = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.weather = response.xpath('//input[@id="sid"]/@value').extract()
-        i.cloudy = response.xpath('//input[@id="sid"]/@value').extract()
-        i.temperature_cs = response.xpath('//input[@id="sid"]/@value').extract()
-        i.dewpoint = response.xpath('//input[@id="sid"]/@value').extract()
-        i.VPP = response.xpath('//input[@id="sid"]/@value').extract()
-        i.dep_weather = dep_weather
+        dep_metar_string = self.extract_typical(response, "Registration:")
+        i.dep_weather = self.extract_weather(dep_metar_string)
 
-        dest_weather = Weather()
-        i.wind_speed_ff_ms = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.wind_direction_ddd = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.vi.i.y_VVVV = response.xpath('//input[@id="sid"]/@value').extract()
-        i.VPP_vi.i.y_VrVrVrVr = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.weather = response.xpath('//input[@id="sid"]/@value').extract()
-        i.cloudy = response.xpath('//input[@id="sid"]/@value').extract()
-        i.temperature_cs = response.xpath('//input[@id="sid"]/@value').extract()
-        i.dewpoint = response.xpath('//input[@id="sid"]/@value').extract()
-        i.VPP = response.xpath('//input[@id="sid"]/@value').extract()
+        dest_metar_string = self.extract_typical(response, "Registration:")
+        i.dest_weather = self.extract_weather(dest_metar_string)
 
-        i.asn_dest_airfield = response.xpath(
-            '//input[@id="sid"]/@value').extract()
-        i.dest_weather = dest_weather
-
-        i.save()
+        #i.save()
         return i
+
+    def extract_weather(self, response):
+        dep_weather = Weather()
+        dep_weather.wind_speed_ff_ms = self.extract_typical(response,
+                                                            "Registration:")
+        dep_weather.wind_direction_ddd = self.extract_typical(response,
+                                                              "Registration:")
+        dep_weather.vi.i.y_VVVV = self.extract_typical(response,
+                                                       "Registration:")
+        dep_weather.VPP_vi.i.y_VrVrVrVr = self.extract_typical(response,
+                                                               "Registration:")
+        dep_weather.weather = self.extract_typical(response, "Registration:")
+        dep_weather.cloudy = self.extract_typical(response, "Registration:")
+        dep_weather.temperature_cs = self.extract_typical(response,
+                                                          "Registration:")
+        dep_weather.dewpoint = self.extract_typical(response, "Registration:")
+        dep_weather.VPP = self.extract_typical(response, "Registration:")
+        return dep_weather
+
+    def extract_typical(self, response, parameter):
+        time_tuple = response.xpath(
+            "//tr[td='%s']/td[2]/text()" % parameter).extract()
+        tuple_ = None if not time_tuple else parse(time_tuple[0].strip())
+        return tuple_
 
     def parse_aircraft_type(self, response):
         i = AircraftType()
