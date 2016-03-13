@@ -51,12 +51,14 @@ class GetAccidentSpider(CrawlSpider):
             response, "Type:", lambda x: re.findall(r'var=(.+?)\"', x)[-1])
         aircraft.first_flight_date = self.extract_typical(
             response, "First flight:", parse)
-        aircraft.engines_number = self.extract_typical(
-            response, "Engines:", lambda x: re.search(r'^\d', x))
+        typical = self.extract_typical(response, "Engines:",
+                                       lambda x: re.findall(r'^\d', x)[0])
+        aircraft.engines_number = int(typical) if typical else None
         aircraft.asn_engine_type = self.extract_typical(
-            response, "Engines:", lambda x: re.findall(r'.+?href=\"(.+?)\"', x))
+            response, "Engines:",
+            lambda x: re.findall(r'.+?href=\"(.+?)\"', x)[0])
         aircraft.total_airframe_hours = self.extract_typical(
-            response, "Registration:", lambda x: re.findall(r'', x))
+            response, "Registration:", lambda x: re.findall(r'', x)[0])
         aircraft.aircraft = aircraft
 
         i.damage_type = self.extract_typical(response, "Registration:")
