@@ -8,7 +8,7 @@ from scrapy.linkextractors import LinkExtractor
 from scrapy.spiders import CrawlSpider, Rule
 
 from accidents.items import Accident, AircraftType, Airline, Airfield, \
-    EngineType, Aircraft, Weather
+    EngineType, Aircraft, Weather, db
 
 
 class GetAccidentSpider(CrawlSpider):
@@ -32,50 +32,66 @@ class GetAccidentSpider(CrawlSpider):
     )
 
     def parse_accident(self, response):
-        i = Accident()
+        asn_id = re.split(r'record.php\?id=', response.url)[-1]
+        with db.transaction():
+            i = Accident.get_or_create(asn_id = asn_id)
 
-        i.asn_id = re.split(r'record.php\?id=', response.url)[-1]
-        date_text = response.xpath(
-            "//tr[td='Date:']/td[2]/text()").extract()[0]
-        if (date_text.strip() == 'date unk.'):
-            return
-        i.date = self.extract_typical(response, "Date:", parse)
-        i.time = self.extract_typical(response, "Time:", datetime.time)
+            date_text = response.xpath(
+                "//tr[td='Date:']/td[2]/text()").extract()[0]
+            if (date_text.strip() == 'date unk.'):
+                return
+            i.date = self.extract_typical(response, "Date:", parse)
+            i.time = self.extract_typical(response, "Time:", datetime.time)
 
-        # extract aircraft
+            aircraft.aircraft = aircraft
+
+            i.damage_type = self.extract_typical(response, "Airplane damage:")
+            i.flight_phase = self.extract_typical(response, "Registration:")
+
+            i.asn_dep_airfield = self.extract_typical(response, "Registration:")
+            i.asn_dest_airfield = self.extract_typical(response, "Registration:")
+
+            dep_metar_string = self.extract_typical(response, "Registration:")
+            i.dep_weather = self.extract_weather(dep_metar_string)
+
+            dest_metar_string = self.extract_typical(response, "Registration:")
+            i.dest_weather = self.extract_weather(dest_metar_string)
+
+            #i.save()
+        return i
+
+    def extract_aircraft(self, response):
         aircraft = Aircraft()
-        aircraft.registration =self.extract_typical(response, "Registration:")
+        aircraft.registration = self.extract_typical(response, "Registration:")
         aircraft.model_serial_number = self.extract_typical(
             response, "C/n / msn:")
         aircraft.asn_aircraft_type = self.extract_typical(
-            response, "Type:", lambda x: re.findall(r'var=(.+?)\"', x)[-1])
+            response, "Type:",
+            lambda x: re.findall(r'types\/(.+?)\/index"', x)[-1])
         aircraft.first_flight_date = self.extract_typical(
-            response, "First flight:", parse)
-        typical = self.extract_typical(response, "Engines:",
-                                       lambda x: re.findall(r'^\d', x)[0])
-        aircraft.engines_number = int(typical) if typical else None
+            response, "First flight:", lambda x: parse((x[0].split()[0])))
+
+        number_string = self.extract_typical(response, "Engines:")
+        aircraft.engines_number = int(number_string) if number_string else None
+
         aircraft.asn_engine_type = self.extract_typical(
-            response, "Engines:",
-            lambda x: re.findall(r'.+?href=\"(.+?)\"', x)[0])
-        aircraft.total_airframe_hours = self.extract_typical(
-            response, "Registration:", lambda x: re.findall(r'', x)[0])
-        aircraft.aircraft = aircraft
+            response, "Engines:", lambda x: re.findall(r'engine\/(.+?)\"', x[-1])[0])
+        return aircraft
 
-        i.damage_type = self.extract_typical(response, "Registration:")
-        i.lat = self.extract_typical(response, "Registration:")
-        i.long = self.extract_typical(response, "Registration:")
-        i.flight_phase = self.extract_typical(response, "Registration:")
-        i.asn_dep_airfield = self.extract_typical(response, "Registration:")
-        i.asn_dest_airfield = self.extract_typical(response, "Registration:")
+    def parse_accident_geo(selfself, response):
+        id = re.split(r'php\?id=', response.url)[-1]
+        dep = Airfield.get_or_create(asn_id = id)
+        parameter = 'Departure airport'
+        xpath_result = response.xpath(
+                "//Placemark[name='%s']/Lookat/node()" % parameter).extract()
+        dep = Airfield.get_or_create()
 
-        dep_metar_string = self.extract_typical(response, "Registration:")
-        i.dep_weather = self.extract_weather(dep_metar_string)
+        i = Accident.get_or_create(id = id)
+        #i.lat = self.extract_typical(response, "Registration:")
+        #i.long = self.extract_typical(response, "Registration:")
 
-        dest_metar_string = self.extract_typical(response, "Registration:")
-        i.dest_weather = self.extract_weather(dest_metar_string)
 
-        #i.save()
-        return i
+        return None
 
     def extract_weather(self, response):
         dep_weather = Weather()
@@ -95,13 +111,20 @@ class GetAccidentSpider(CrawlSpider):
         dep_weather.VPP = self.extract_typical(response, "Registration:")
         return dep_weather
 
-    def extract_typical(self, response, parameter, proceed = lambda x: x):
+    def extract_typical(self, response, parameter, proceed = lambda x: x[0]):
         try:
             xpath_result = response.xpath(
                 "//tr[td='%s']/td[2]/node()" % parameter).extract()
-            return None if not xpath_result else proceed(xpath_result[0].strip())
-        except:
+            return None if not xpath_result else self.method_name(proceed,
+                                                                  xpath_result)
+        except Exception as ex:
+            print ex
             return None
+
+    def method_name(self, proceed, xpath_result):
+        proceed1 = proceed(xpath_result)
+        strip = proceed1
+        return strip
 
     def parse_aircraft_type(self, response):
         i = AircraftType()

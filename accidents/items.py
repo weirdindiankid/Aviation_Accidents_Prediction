@@ -100,21 +100,21 @@ class Aircraft(Model):
 
 class Accident(Model):
     asn_id = CharField(20)
-    date = DateField()
-    time = TimeField()
-    aircraft = ForeignKeyField(Aircraft, related_name='accidents')
-    damage_type = CharField(max_length=100)
+    date = DateField(null=True)
+    time = TimeField(null=True)
+    aircraft = ForeignKeyField(Aircraft, related_name='accidents', null=True)
+    damage_type = CharField(max_length=100, null=True)
     lat = DecimalField(max_digits=COORDINATES_LENGTH,
-                       decimal_places=COORDINATES_DECIMAL)
+                       decimal_places=COORDINATES_DECIMAL, null=True)
     long = DecimalField(max_digits=COORDINATES_LENGTH,
-                        decimal_places=COORDINATES_DECIMAL)
-    flight_phase = CharField()
-    dep_airfield = ForeignKeyField(Airfield, related_name='dep_accidents')
-    asn_dep_airfield = CharField(20)
-    dep_weather = ForeignKeyField(Weather, related_name='department_accident')
-    dest_airfield = ForeignKeyField(Airfield, related_name='dest_accidents')
-    asn_dest_airfield = CharField(20)
-    dest_weather = ForeignKeyField(Weather, related_name='destination_accident')
+                        decimal_places=COORDINATES_DECIMAL, null=True)
+    flight_phase = CharField(null=True)
+    dep_airfield = ForeignKeyField(Airfield, related_name='dep_accidents', null=True)
+    asn_dep_airfield = CharField(20, null=True)
+    dep_weather = ForeignKeyField(Weather, related_name='department_accident', null=True)
+    dest_airfield = ForeignKeyField(Airfield, related_name='dest_accidents', null=True)
+    asn_dest_airfield = CharField(20, null=True)
+    dest_weather = ForeignKeyField(Weather, related_name='destination_accident', null=True)
 
     class Meta:
         database = db
