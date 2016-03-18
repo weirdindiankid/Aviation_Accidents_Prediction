@@ -38,7 +38,7 @@ class GetAccidentSpider(CrawlSpider):
         print 'url ==== {}'.format(response.url)
         asn_id = re.split(r'record.php\?id=', response.url)[-1]
         with db.transaction():
-            accident = Accident.get_or_create(asn_id=asn_id)
+            accident = Accident.get_or_create(asn_id=asn_id)[0]
             accident.main_url = response.url
             accident.date = self.extract_date(response)
             accident.time = self.extract_typical(response, "Time:",
@@ -46,7 +46,9 @@ class GetAccidentSpider(CrawlSpider):
 
             accident.aircraft = self.extract_aircraft(response)
 
-            url = self.extract_url('Type:', response)
+            url_splitted = ((self.extract_url('Type:', response).split(u'/'))[:-1])
+            url_splitted.append(u'specs')
+            url =  '/'.join(url_splitted) if url_splitted else ''
             request = scrapy.Request(url, callback=self.parse_aircraft_type)
             request.meta['item'] = accident
             yield request
@@ -86,7 +88,7 @@ class GetAccidentSpider(CrawlSpider):
             url = urlunparse((parsed_url.scheme, parsed_url.netloc,
                               aircraft_type_url, '', '', None))
             return url
-        except:
+        except Exception as ex:
             return ''
 
     def extract_date(self, response):
