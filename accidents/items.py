@@ -109,12 +109,17 @@ class Accident(Model):
     long = DecimalField(max_digits=COORDINATES_LENGTH,
                         decimal_places=COORDINATES_DECIMAL, null=True)
     flight_phase = CharField(null=True)
-    dep_airfield = ForeignKeyField(Airfield, related_name='dep_accidents', null=True)
+    flight_nature = CharField(null=True)
+    dep_airfield = ForeignKeyField(Airfield, related_name='dep_accidents',
+                                   null=True)
     asn_dep_airfield = CharField(20, null=True)
-    dep_weather = ForeignKeyField(Weather, related_name='department_accident', null=True)
-    dest_airfield = ForeignKeyField(Airfield, related_name='dest_accidents', null=True)
+    dep_weather = ForeignKeyField(Weather, related_name='department_accident',
+                                  null=True)
+    dest_airfield = ForeignKeyField(Airfield, related_name='dest_accidents',
+                                    null=True)
     asn_dest_airfield = CharField(20, null=True)
-    dest_weather = ForeignKeyField(Weather, related_name='destination_accident', null=True)
+    dest_weather = ForeignKeyField(Weather, related_name='destination_accident',
+                                   null=True)
 
     class Meta:
         database = db
